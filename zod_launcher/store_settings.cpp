@@ -10,8 +10,9 @@ settings_struct g_settings;
 void StoreSettings()
 {
 	FILE *fp;
+	string path = GetWriteConfigPath("zod_launcher_settings.cfg");
 
-	fp = fopen("zod_launcher_settings.cfg", "w");
+	fp = fopen(path.c_str(), "w");
 
 	if(!fp) return;
 
@@ -44,8 +45,9 @@ void StoreSettings()
 void LoadSettings()
 {
 	FILE *fp;
+	string path = GetWriteConfigPath("zod_launcher_settings.cfg");
 
-	fp = fopen("zod_launcher_settings.cfg", "r");
+	fp = fopen(path.c_str(), "r");
 
 	if(!fp) return;
 

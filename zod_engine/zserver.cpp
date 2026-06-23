@@ -51,9 +51,11 @@ void ZServer::Setup()
 		zsettings.LoadSettings(settings_filename);
 	else
 	{
-		//if we can't load the default filename, then make it
-		if(!zsettings.LoadSettings("default_settings.cfg"))
-			zsettings.SaveSettings("default_settings.cfg");
+		string cfg_path = FindConfigFile("default_settings.cfg");
+		if(cfg_path.length())
+			zsettings.LoadSettings(cfg_path);
+		else
+			zsettings.SaveSettings(GetWriteConfigPath("default_settings.cfg"));
 	}
 
 	//load the map list
@@ -453,7 +455,14 @@ bool ZServer::ReadMapList()
 
 	map_list.clear();
 
-	fp = fopen(map_list_name.c_str(), "r");
+	//search for config: CWD → ~/.config/zod/
+	{
+		string cfg_path = FindConfigFile(map_list_name);
+		if(cfg_path.length())
+			fp = fopen(cfg_path.c_str(), "r");
+		else
+			fp = NULL;
+	}
 
 	if(!fp)
 	{
@@ -466,19 +475,22 @@ bool ZServer::ReadMapList()
 
 		if(mlist.size())
 		{
-			fp = fopen(map_list_name.c_str(), "w");
+			string save_path = GetWriteConfigPath(map_list_name);
+			fp = fopen(save_path.c_str(), "w");
 			if(fp)
 			{
 				fprintf(fp, "0\n");
 				for(size_t i=0; i<mlist.size(); i++)
 					fprintf(fp, "maps/%s\n", mlist[i].c_str());
 				fclose(fp);
-				printf("ReadMapList::auto-generated '%s' with %zu maps\n", map_list_name.c_str(), mlist.size());
+				printf("ReadMapList::auto-generated '%s' with %zu maps\n", save_path.c_str(), mlist.size());
 			}
-		}
 
-		fp = fopen(map_list_name.c_str(), "r");
-		if(!fp) return false;
+			fp = fopen(save_path.c_str(), "r");
+			if(!fp) return false;
+		}
+		else
+			return false;
 	}
 
 	//random?

@@ -1,6 +1,11 @@
 #ifndef _COMMON_H_
 #define _COMMON_H_
 
+#include <string>
+#include <stdlib.h>
+
+using namespace std;
+
 namespace COMMON
 {
 	extern void split(char *dest, char *message, char split, int *initial, int d_size, int m_size);
@@ -18,6 +23,11 @@ namespace COMMON
 	extern bool points_within_area(int px, int py, int ax, int ay, int aw, int ah);
 	extern bool good_user_char(int c);
 	extern bool good_user_string(const char *message);
+
+	//config file path resolution
+	extern string GetUserConfigDir();
+	extern string FindConfigFile(const string &filename);
+	extern string GetWriteConfigPath(const string &filename);
 
 	//inline functions...
 	inline bool isz(float num) { return (num < 0.00001 && num > -0.00001); };

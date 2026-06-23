@@ -42,6 +42,11 @@ namespace COMMON
 	extern void parse_filelist(vector<string> &filelist, string extension);
 	extern bool sort_string_func (const string &a, const string &b);
 
+	//config file path resolution
+	extern string GetUserConfigDir();
+	extern string FindConfigFile(const string &filename);
+	extern string GetWriteConfigPath(const string &filename);
+
 	//inline functions...
 	inline bool isz(float num) { return (num < 0.00001 && num > -0.00001); };
 	inline bool isz(double num) { return (num < 0.00001 && num > -0.00001); };

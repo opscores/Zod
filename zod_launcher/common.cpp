@@ -212,4 +212,66 @@ bool good_user_string(const char *message)
 	return true;
 }
 
+string GetUserConfigDir()
+{
+	string dir;
+
+#ifdef _WIN32
+	dir = getenv("APPDATA");
+	if(dir.length())
+		dir += "\\zod\\";
+	else
+		dir = ".\\zod_config\\";
+#else
+	const char *xdg = getenv("XDG_CONFIG_HOME");
+	if(xdg && xdg[0])
+		dir = string(xdg) + "/zod/";
+	else
+	{
+		const char *home = getenv("HOME");
+		if(home)
+			dir = string(home) + "/.config/zod/";
+		else
+			dir = ".zod_config/";
+	}
+#endif
+
+	return dir;
+}
+
+string FindConfigFile(const string &filename)
+{
+	//1. try CWD
+	FILE *fp = fopen(filename.c_str(), "r");
+	if(fp)
+	{
+		fclose(fp);
+		return filename;
+	}
+
+	//2. try ~/.config/zod/
+	string config_path = GetUserConfigDir() + filename;
+	fp = fopen(config_path.c_str(), "r");
+	if(fp)
+	{
+		fclose(fp);
+		return config_path;
+	}
+
+	return "";
+}
+
+string GetWriteConfigPath(const string &filename)
+{
+	string dir = GetUserConfigDir();
+
+#ifdef _WIN32
+	_mkdir(dir.c_str());
+#else
+	mkdir(dir.c_str(), 0755);
+#endif
+
+	return dir + filename;
+}
+
 };
