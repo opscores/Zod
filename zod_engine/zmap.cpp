@@ -645,7 +645,6 @@ void ZMap::ClearMap()
 {
 	file_loaded = false;
 
-	basic_info.clear();
 	zone_list.clear();
 	object_list.clear();
 	tile_list.clear();
@@ -663,6 +662,8 @@ void ZMap::ClearMap()
 	DeleteSubmergeAmounts();
 	DeleteRockList();
 	DeleteStampList();
+
+	basic_info.clear();
 	FreeMapData();
 }
 
@@ -1004,11 +1005,16 @@ int ZMap::Read(const char* filename)
 
 	while(ret = fread(buf, 1, buf_size, fp))
 	{
-		//resize
-		if(!map_data) 
-			map_data = (char*)malloc(ret);
-		else
-			map_data = (char*)realloc(map_data, map_data_size + ret);
+		char *new_data = (char*)realloc(map_data, map_data_size + ret);
+		if(!new_data)
+		{
+			free(map_data);
+			map_data = NULL;
+			map_data_size = 0;
+			fclose(fp);
+			return 0;
+		}
+		map_data = new_data;
 
 		memcpy(map_data + map_data_size, buf, ret);
 		map_data_size += ret;
@@ -2121,6 +2127,7 @@ void ZMap::DeleteStampList()
 	for(int i=0;i<basic_info.width;i++)
 		free(stamp_list[i]);
 	free(stamp_list);
+	stamp_list = NULL;
 
 	//done
 	stamp_list_setup = false;
@@ -2160,6 +2167,7 @@ void ZMap::DeleteRockList()
 	for(int i=0;i<basic_info.width;i++)
 		free(rock_list[i]);
 	free(rock_list);
+	rock_list = NULL;
 
 	//done
 	rock_list_setup = false;
@@ -2250,6 +2258,7 @@ void ZMap::DeleteSubmergeAmounts()
 	for(int i=0;i<basic_info.width;i++)
 		free(submerge_amount[i]);
 	free(submerge_amount);
+	submerge_amount = NULL;
 
 	//done
 	submerge_info_setup = false;
