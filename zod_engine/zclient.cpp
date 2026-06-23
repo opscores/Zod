@@ -341,7 +341,6 @@ ZObject* ZClient::ProcessNewObject(char *data, int size)
 			new_object_ptr = new OMapObject(&ztime, &zsettings, o->object_id);
 
 		break;
-	case ROBOT_OBJECT: case VEHICLE_OBJECT: case BUILDING_OBJECT: case CANNON_OBJECT: // ✅ handled above (duplicated in some branches)
 	default:
 		// NOTE: ANIMAL_OBJECT is NOT supported here — it has graphics in assets/other/birds/ 
 		// and sounds in assets/sounds/*BIRD*.wav, but no handler was ever added to CreateObject().
