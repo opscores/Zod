@@ -1,0 +1,40 @@
+# Compiled binaries and object files
+zod_engine/zod
+zod_engine/*.o
+zod_launcher/zod_launcher
+zod_launcher/*.o
+zod_mapeditor/zod_map_editor
+zod_mapeditor/tile_info_editor
+zod_mapeditor/map_merger
+
+# IDE/editor settings (optional, comment out if not needed)
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.userprefs.xml
+.settings.json
+
+# Temporary files and directories
+tmp/
+temp/
+.tmp/
+*.log
+*.out
+
+# Build artifacts from make with OPENGL=1
+zod_engine/*.o.opengl
+zod_launcher/*.o.opengl
+zod_mapeditor/*.o.opengl
+
+# OS-specific temporary files
+.DS_Store
+Thumbs.db
+
+# Local config overrides (optional - comment out to share configs)
+default_settings.cfg.local
+map_list.cfg.local
+mp3_map_list.cfg.local
+mp4_map_list.cfg.local
