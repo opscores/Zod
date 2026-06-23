@@ -47,6 +47,16 @@ namespace COMMON
 	extern string FindConfigFile(const string &filename);
 	extern string GetWriteConfigPath(const string &filename);
 
+	//data file path resolution (assets/, maps/)
+	extern string data_path;
+	extern void SetDataPath(const string &path);
+	extern string ResolveDataPath(const string &path);
+
+	//XDG directory helpers
+	extern string GetDataHome();
+	extern vector<string> GetSystemConfigDirs();
+	extern vector<string> GetSystemDataDirs();
+
 	//inline functions...
 	inline bool isz(float num) { return (num < 0.00001 && num > -0.00001); };
 	inline bool isz(double num) { return (num < 0.00001 && num > -0.00001); };

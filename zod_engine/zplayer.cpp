@@ -445,8 +445,8 @@ void ZPlayer::InitSDL()
 
 	//TTF
 	TTF_Init();
-	ttf_font = TTF_OpenFont("assets/arial.ttf",10);
-	ttf_font_7 = TTF_OpenFont("assets/arial.ttf",7);
+	ttf_font = TTF_OpenFont(ResolveDataPath("assets/arial.ttf").c_str(),10);
+	ttf_font_7 = TTF_OpenFont(ResolveDataPath("assets/arial.ttf").c_str(),7);
 	if (!ttf_font) printf("could not load assets/arial.ttf\n");
 
 	//splash sound best loaded here

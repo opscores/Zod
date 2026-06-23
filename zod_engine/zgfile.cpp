@@ -20,7 +20,7 @@ void ZGFile::LoadEntryList()
 	FILE *fp;
 	string full_path = ASSETS_PATH + "/" + ZGFILE_NAME;
 
-	fp = fopen(full_path.c_str(), "rb");
+	fp = fopen(COMMON::ResolveDataPath(full_path).c_str(), "rb");
 
 	if(!fp)
 	{
@@ -172,7 +172,7 @@ SDL_Surface *ZGFile::LoadFile(string filename)
 	}
 
 	string full_path = ASSETS_PATH + "/" + ZGFILE_NAME;
-	fp = fopen(full_path.c_str(), "rb");
+	fp = fopen(COMMON::ResolveDataPath(full_path).c_str(), "rb");
 
 	if(!fp)
 	{

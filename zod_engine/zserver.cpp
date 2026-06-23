@@ -164,8 +164,14 @@ void ZServer::InitPerpetualServerSettings()
 {
 	if(p_settings_filename.length())
 	{
-		if(!psettings.LoadSettings(p_settings_filename))
-			psettings.SaveSettings(p_settings_filename);
+		string cfg_path = FindConfigFile(p_settings_filename);
+		if(cfg_path.length())
+		{
+			if(!psettings.LoadSettings(cfg_path))
+				psettings.SaveSettings(GetWriteConfigPath(p_settings_filename));
+		}
+		else
+			psettings.SaveSettings(GetWriteConfigPath(p_settings_filename));
 	}
 
 	if(psettings.use_database && psettings.use_mysql)
@@ -470,6 +476,8 @@ bool ZServer::ReadMapList()
 
 		//auto-generate from maps/ directory
 		vector<string> mlist = directory_filelist("maps/");
+		if(!mlist.size() && COMMON::data_path.length())
+			mlist = directory_filelist(COMMON::data_path + "/maps/");
 		parse_filelist(mlist, ".map");
 		sort(mlist.begin(), mlist.end(), sort_string_func);
 
@@ -527,7 +535,12 @@ bool ZServer::ReadSelectableMapList()
 
 	selectable_map_list.clear();
 
-	fp = fopen(psettings.selectable_map_list.c_str(), "r");
+	{
+		string cfg_path = FindConfigFile(psettings.selectable_map_list);
+		if(!cfg_path.length())
+			cfg_path = psettings.selectable_map_list;
+		fp = fopen(cfg_path.c_str(), "r");
+	}
 
 	if(!fp) 
 	{

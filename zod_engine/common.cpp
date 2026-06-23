@@ -347,6 +347,32 @@ bool sort_string_func (const string &a, const string &b)
 	return strcmp(a.c_str(), b.c_str()) < 0;
 }
 
+string data_path = "";
+
+void SetDataPath(const string &path)
+{
+	data_path = path;
+	if(data_path.length())
+		printf("COMMON::SetDataPath::set to '%s'\n", data_path.c_str());
+}
+
+string ResolveDataPath(const string &path)
+{
+	struct stat st;
+
+	if(stat(path.c_str(), &st) == 0)
+		return path;
+
+	if(data_path.length())
+	{
+		string alt = data_path + "/" + path;
+		if(stat(alt.c_str(), &st) == 0)
+			return alt;
+	}
+
+	return path;
+}
+
 string GetUserConfigDir()
 {
 	string dir;
@@ -384,13 +410,26 @@ string FindConfigFile(const string &filename)
 		return filename;
 	}
 
-	//2. try ~/.config/zod/
+	//2. try user config dir (~/.config/zod/)
 	string config_path = GetUserConfigDir() + filename;
 	fp = fopen(config_path.c_str(), "r");
 	if(fp)
 	{
 		fclose(fp);
 		return config_path;
+	}
+
+	//3. try system config dirs (/etc/xdg/zod/)
+	vector<string> sys_dirs = GetSystemConfigDirs();
+	for(size_t i=0; i<sys_dirs.size(); i++)
+	{
+		config_path = sys_dirs[i] + "/" + filename;
+		fp = fopen(config_path.c_str(), "r");
+		if(fp)
+		{
+			fclose(fp);
+			return config_path;
+		}
 	}
 
 	return "";
@@ -407,6 +446,76 @@ string GetWriteConfigPath(const string &filename)
 #endif
 
 	return dir + filename;
+}
+
+string GetDataHome()
+{
+#ifdef _WIN32
+	return "";
+#else
+	const char *xdg = getenv("XDG_DATA_HOME");
+	if(xdg && xdg[0])
+		return string(xdg) + "/zod";
+	const char *home = getenv("HOME");
+	if(home)
+		return string(home) + "/.local/share/zod";
+	return "";
+#endif
+}
+
+vector<string> GetSystemConfigDirs()
+{
+	vector<string> dirs;
+#ifdef _WIN32
+	return dirs;
+#else
+	const char *xdg = getenv("XDG_CONFIG_DIRS");
+	if(xdg && xdg[0])
+	{
+		string s(xdg);
+		size_t start = 0, end;
+		while((end = s.find(':', start)) != string::npos)
+		{
+			if(end > start)
+				dirs.push_back(s.substr(start, end - start) + "/zod");
+			start = end + 1;
+		}
+		if(start < s.length())
+			dirs.push_back(s.substr(start) + "/zod");
+	}
+	else
+		dirs.push_back("/etc/xdg/zod");
+	return dirs;
+#endif
+}
+
+vector<string> GetSystemDataDirs()
+{
+	vector<string> dirs;
+#ifdef _WIN32
+	return dirs;
+#else
+	const char *xdg = getenv("XDG_DATA_DIRS");
+	if(xdg && xdg[0])
+	{
+		string s(xdg);
+		size_t start = 0, end;
+		while((end = s.find(':', start)) != string::npos)
+		{
+			if(end > start)
+				dirs.push_back(s.substr(start, end - start) + "/zod");
+			start = end + 1;
+		}
+		if(start < s.length())
+			dirs.push_back(s.substr(start) + "/zod");
+	}
+	else
+	{
+		dirs.push_back("/usr/local/share/zod");
+		dirs.push_back("/usr/share/zod");
+	}
+	return dirs;
+#endif
 }
 
 };

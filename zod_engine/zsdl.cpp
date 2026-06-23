@@ -446,7 +446,8 @@ SDL_Surface *ZSDL_IMG_Load(string filename)
 {
 	SDL_Surface *ret;
 	
-	ret = IMG_Load(filename.c_str());
+	string resolved = ResolveDataPath(filename);
+	ret = IMG_Load(resolved.c_str());
 
 	if(!ret) printf("could not load:%s\n", filename.c_str()); 
 
@@ -472,7 +473,8 @@ Mix_Music *MUS_Load_Error(string filename)
 {
 	Mix_Music *ret;
 	
-	if(!(ret = Mix_LoadMUS(filename.c_str()))) printf("could not load:%s\n", filename.c_str());
+	string resolved = ResolveDataPath(filename);
+	if(!(ret = Mix_LoadMUS(resolved.c_str()))) printf("could not load:%s\n", filename.c_str());
 	
 	return ret;
 }
@@ -481,7 +483,8 @@ Mix_Chunk *MIX_Load_Error(string filename)
 {
 	Mix_Chunk *ret;
 	
-	if(!(ret = Mix_LoadWAV(filename.c_str()))) printf("could not load:%s\n", filename.c_str());
+	string resolved = ResolveDataPath(filename);
+	if(!(ret = Mix_LoadWAV(resolved.c_str()))) printf("could not load:%s\n", filename.c_str());
 	
 	return ret;
 }

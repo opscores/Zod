@@ -2,7 +2,8 @@ JOBS=$(shell nproc 2>/dev/null || echo 4)
 MAKEFLAGS=-j$(JOBS)
 CC=g++
 OPENGL=0
-CFLAGS=-c -g `sdl-config --cflags` -D DISABLE_REGCHECK
+DATA_DIR ?= /usr/share/games/zod
+CFLAGS=-c -g `sdl-config --cflags` -D DISABLE_REGCHECK -D DATA_DIR=\"$(DATA_DIR)\"
 LDFLAGS=`sdl-config --libs` -lSDL_image -lSDL_mixer -lSDL_ttf -lm -lmysqlclient
 
 ifeq ($(OPENGL),0)

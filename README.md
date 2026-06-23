@@ -61,9 +61,12 @@ sudo apt-get install libsdl-dev libsdl-ttf2.0-dev libsdl-mixer1.2-dev \
 - `mp4_map_list.cfg` — map rotation list (planet 4)
 - `README.md`
 
-> **Note:** Map files (`.map`) are stored in `maps/`. The game searches the
-> current directory first, then falls back to `maps/<filename>`. Configuration
-> files use `.cfg` extension to distinguish them from documentation.
+> **Note:** Map files (`.map`) are stored in `maps/`. The game uses XDG Base
+> Directory paths: search order is CWD → `$XDG_DATA_HOME/zod/`
+> (`~/.local/share/zod/`) → `$XDG_DATA_DIRS/zod/` → `DATA_DIR` (compile-time,
+> default `/usr/share/games/zod/`). Configuration files are searched in CWD →
+> `$XDG_CONFIG_HOME/zod/` (`~/.config/zod/`) → `$XDG_CONFIG_DIRS/zod/`
+> (`/etc/xdg/zod/`). See `-A` flag to override data root.
 
 ---
 
@@ -104,6 +107,7 @@ Outputs: `zod_map_editor`, `tile_info_editor`, `map_merger`
 |----------|---------|-------------|
 | `OPENGL` | `0` | Set to `1` to enable OpenGL rendering |
 | `JOBS` | `nproc` | Parallel build jobs |
+| `DATA_DIR` | `/usr/share/games/zod` | System data root for installed packages |
 
 > **Important:** Run `make clean` when switching `OPENGL` between `0` and `1`.
 > Stale object files will cause linker errors.
@@ -152,7 +156,7 @@ The launcher provides a GUI for:
 | `-s` | — | Disable sound |
 | `-u` | — | Disable music |
 | `-k` | — | Use bland cursor (faster performance) |
-| `-A` | `path` | Custom assets path |
+| `-A` | `path` | Custom data root (overrides XDG data dir search; must contain `assets/` and `maps/`) |
 | `-v` | — | Display version |
 | `-h` | — | Display help |
 
@@ -268,6 +272,7 @@ If the game fails to start, try:
 3. **Bland cursor:** `-k` (reduces GPU load)
 4. **Verify all dependencies** are installed (see [Installation](#installation))
 5. **Run from the engine directory** — the game expects `assets/` and `maps/`
-   in the current working directory
+   in the current working directory. Use `-A <path>` or install data to a
+   standard XDG path (see [Command-Line Reference](#command-line-reference)).
 
 For further help, visit: http://zod.sourceforge.net

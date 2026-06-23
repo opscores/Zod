@@ -11,6 +11,7 @@ TCHAR *optarg;
 
 #else
 #include <unistd.h>
+#include <sys/stat.h>
 #endif
 
 
@@ -52,6 +53,52 @@ int main(int argc, char **argv)
 	//like we are trying to make a dedicated server that is supposed to connect to another server
 	starting_conditions.checkoptions();
 	
+	//set data path for assets/maps
+	{
+		if(starting_conditions.read_assets_path)
+		{
+			COMMON::SetDataPath(starting_conditions.assets_path);
+		}
+		else
+		{
+			struct stat st;
+			if(stat("assets", &st) != 0 || !S_ISDIR(st.st_mode))
+			{
+				string data_root;
+
+				//1. try XDG_DATA_HOME/zod/
+				string home_dir = COMMON::GetDataHome();
+				if(home_dir.length() && stat(home_dir.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+					data_root = home_dir;
+
+				//2. try XDG_DATA_DIRS/zod/
+				if(!data_root.length())
+				{
+					vector<string> sys_dirs = COMMON::GetSystemDataDirs();
+					for(size_t i=0; !data_root.length() && i<sys_dirs.size(); i++)
+						if(stat(sys_dirs[i].c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+							data_root = sys_dirs[i];
+				}
+
+				//3. try compile-time DATA_DIR
+				if(!data_root.length())
+				{
+					string ddir;
+#ifdef DATA_DIR
+					ddir = DATA_DIR;
+#else
+					ddir = "/usr/share/games/zod";
+#endif
+					if(stat(ddir.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+						data_root = ddir;
+				}
+
+				if(data_root.length())
+					COMMON::SetDataPath(data_root);
+			}
+		}
+	}
+
 	//init this for the bots
 	ZCore::CreateRandomBotBypassData(bot_bypass_data, bot_bypass_size);
 
@@ -161,8 +208,6 @@ void run_player_thread()
 		zplayer.SetRemoteAddress(starting_conditions.connect_address);
 	if(starting_conditions.read_resolution)
 		zplayer.SetDimensions(starting_conditions.resolution_width, starting_conditions.resolution_height);
-	if(starting_conditions.read_assets_path)
-		ASSETS_PATH = starting_conditions.assets_path;
 	
 	zplayer.Setup();
 	zplayer.Run();
@@ -203,7 +248,7 @@ void display_help(char *shell_command)
 	printf("-k                   - use faster and blander cursor\n");
 	printf("-v                   - display version and credits\n");
 		printf("-a                   - run shell based tray app\n");
-		printf("-A assets_path       - specify custom assets path\n");
+		printf("-A data_path         - specify custom data root (contains assets/ and maps/)\n");
 		
 		printf("\nExample usage...\n");
 	printf("%s -c localhost -r 800x600 -w\n", shell_command);

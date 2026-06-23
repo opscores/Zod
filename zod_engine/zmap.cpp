@@ -125,7 +125,7 @@ void ZMap::LoadPaletteInfo(int terrain_type)
 	SDL_LockMutex(init_mutex);
 
 	filename = ASSETS_PATH + "/planets/" + planet_type_string[i] + ".tileinfo";
-	fp = fopen(filename.c_str(), "rb");
+	fp = fopen(COMMON::ResolveDataPath(filename).c_str(), "rb");
 	
 	if(!fp)
 	{
@@ -134,7 +134,7 @@ void ZMap::LoadPaletteInfo(int terrain_type)
 		//so we'll write this default one...
 		WriteMapPaletteTileInfo((planet_type)i);
 		
-		fp = fopen(filename.c_str(), "rb");
+		fp = fopen(COMMON::ResolveDataPath(filename).c_str(), "rb");
 		
 		if(!fp)
 		{
@@ -996,6 +996,18 @@ int ZMap::Read(const char* filename)
 		char maps_path[520];
 		sprintf(maps_path, "maps/%s", filename);
 		fp = fopen(maps_path, "rb");
+	}
+
+	if(!fp && COMMON::data_path.length())
+	{
+		string alt = COMMON::data_path + "/" + filename;
+		fp = fopen(alt.c_str(), "rb");
+	}
+
+	if(!fp && COMMON::data_path.length())
+	{
+		string alt = COMMON::data_path + "/maps/" + filename;
+		fp = fopen(alt.c_str(), "rb");
 	}
 
 	if(!fp) return 0;
