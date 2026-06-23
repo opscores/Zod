@@ -72,6 +72,17 @@ void ZServer::Setup()
 		printf("ZServer::Setup:using selectable map list as the map list\n");
 	}
 
+	//fallback: auto-discover maps in maps/ directory
+	if(!map_name.size() && !map_list.size())
+	{
+		load_maps_randomly = true;
+		if(ReadSelectableMapListFromFolder("maps/"))
+			map_list = selectable_map_list;
+		if(map_list.size())
+			printf("ZServer::Setup:using %zu maps found in 'maps/' directory\n", map_list.size());
+		else
+			printf("ZServer::Setup:could not find any maps in 'maps/' directory\n");
+	}
 
 	//needed for pathfinding
 	ZMap::ServerInit();
