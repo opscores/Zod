@@ -33,8 +33,9 @@ zod_mapeditor/*.o.opengl
 .DS_Store
 Thumbs.db
 
-# Local config overrides (optional - comment out to share configs)
+# Auto-generated files
 default_settings.cfg.local
 map_list.cfg.local
-mp3_map_list.cfg.local
-mp4_map_list.cfg.local
+
+# User-specific launcher settings
+zod_launcher/zod_launcher_settings.cfg
