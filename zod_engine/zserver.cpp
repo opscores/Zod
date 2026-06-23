@@ -72,18 +72,6 @@ void ZServer::Setup()
 		printf("ZServer::Setup:using selectable map list as the map list\n");
 	}
 
-	//fallback: auto-discover maps in maps/ directory
-	if(!map_name.size() && !map_list.size())
-	{
-		load_maps_randomly = true;
-		if(ReadSelectableMapListFromFolder("maps/"))
-			map_list = selectable_map_list;
-		if(map_list.size())
-			printf("ZServer::Setup:using %zu maps found in 'maps/' directory\n", map_list.size());
-		else
-			printf("ZServer::Setup:could not find any maps in 'maps/' directory\n");
-	}
-
 	//needed for pathfinding
 	ZMap::ServerInit();
 
@@ -467,10 +455,30 @@ bool ZServer::ReadMapList()
 
 	fp = fopen(map_list_name.c_str(), "r");
 
-	if(!fp) 
+	if(!fp)
 	{
 		printf("ReadMapList::could not load '%s'\n", map_list_name.c_str());
-		return false;
+
+		//auto-generate from maps/ directory
+		vector<string> mlist = directory_filelist("maps/");
+		parse_filelist(mlist, ".map");
+		sort(mlist.begin(), mlist.end(), sort_string_func);
+
+		if(mlist.size())
+		{
+			fp = fopen(map_list_name.c_str(), "w");
+			if(fp)
+			{
+				fprintf(fp, "0\n");
+				for(size_t i=0; i<mlist.size(); i++)
+					fprintf(fp, "maps/%s\n", mlist[i].c_str());
+				fclose(fp);
+				printf("ReadMapList::auto-generated '%s' with %zu maps\n", map_list_name.c_str(), mlist.size());
+			}
+		}
+
+		fp = fopen(map_list_name.c_str(), "r");
+		if(!fp) return false;
 	}
 
 	//random?
