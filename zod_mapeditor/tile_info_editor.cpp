@@ -122,7 +122,7 @@ int main(int argc, char **argv)
 // 				event.button.x;
 // 				event.button.y;
 				tile = ZMap::GetPaletteTile(event.button.x, event.button.y);
-				process_thread = SDL_CreateThread(process_tile, (void*)&tile);
+				process_thread = SDL_CreateThread(process_tile, static_cast<void*>(&tile));
 				break;
 			case SDL_MOUSEMOTION:
 // 				event.motion.x;
@@ -287,7 +287,7 @@ void process_tile_normal(int tile)
 
 int process_tile(void *tile_ptr)
 {
-	int tile = *(int*)tile_ptr;
+	int tile = *static_cast<int*>(tile_ptr);
 	
 	if(tile == -1) return 0;
 	
@@ -355,7 +355,7 @@ void display_tile_info_normal(int tile)
 	sprintf(message, "N tile:%d", tile);
 	
 	
-	palette_tile_info &p_info = ZMap::GetMapPaletteTileInfo((planet_type)palette_chosen, tile);
+	const palette_tile_info &p_info = ZMap::GetMapPaletteTileInfo((planet_type)palette_chosen, tile);
 	
 	//clear space
 	SDL_Rect clr_box;
@@ -398,7 +398,7 @@ void display_tile_info_map(int tile)
 	sprintf(message, "M tile:%d", tile);
 	
 	
-	palette_tile_info &p_info = ZMap::GetMapPaletteTileInfo((planet_type)palette_chosen, tile);
+	const palette_tile_info &p_info = ZMap::GetMapPaletteTileInfo((planet_type)palette_chosen, tile);
 	
 	//clear space
 	SDL_Rect clr_box;
@@ -464,10 +464,9 @@ void redraw_all(int tile)
 
 void xmark_process_tile()
 {
-	int x,y;
-	
 	if(current_process_tile != -1)
 	{
+		int x, y;
 		SDL_Color x_color;
 		
 		ZMap::GetPaletteTile(current_process_tile,x,y);

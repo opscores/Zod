@@ -3,7 +3,7 @@
 //this is only needed for some compilers
 #include "xgetopt.h"
 int optind, opterr;
-TCHAR *optarg;
+char *optarg;
 //end xgetopt
 
 #else
@@ -195,12 +195,11 @@ string mapname;
 void init_main_objects();
 void getargs(int argc, char **argv);
 int checkargs(char *exec_command);
-void display_proper_init(char *exec_command);
+void display_proper_init(const char *exec_command);
 void blit_message(const char *message, int x, int y, int r = 255, int g = 255, int b = 255);
 void draw_everything();
 void draw_palette(bool flip = true);
 void draw_map(bool flip = true);
-void draw_seperator(bool flip = true);
 void draw_info(bool flip = true);
 void draw_zones();
 void draw_map_ruler();
@@ -336,7 +335,7 @@ int main(int argc, char **argv)
 	//edit_map.ReplaceUnusableTiles();
 	
 	//load objects
-	for(vector<map_object>::iterator i=edit_map.GetObjectList().begin(); i!=edit_map.GetObjectList().end(); i++)
+	for(vector<map_object>::iterator i=edit_map.GetObjectList().begin(); i!=edit_map.GetObjectList().end(); ++i)
 		load_object(*i);
 
 	//setup rock renders
@@ -431,7 +430,7 @@ int main(int argc, char **argv)
 
 		//edit_map.DoEffects(the_time);
 		
-		for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); i++)
+		for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); ++i)
 			(*i)->Process();
 		
 		draw_map();
@@ -449,7 +448,6 @@ int main(int argc, char **argv)
 void do_print_screen()
 {
 	SDL_Surface *print_surface;
-	string bmp_filename;
 
 	if(!edit_map.GetRender().GetBaseSurface()) return;
 
@@ -478,11 +476,11 @@ void do_print_screen()
 		edit_map.DoZoneEffects(current_time(), print_surface);
 	
 		//draw objects
-		for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); i++)
+		for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); ++i)
 			(*i)->DoRender(edit_map, print_surface);
 	
 		//draw after effects
-		for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); i++)
+		for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); ++i)
 			(*i)->DoAfterEffects(edit_map, print_surface);
 	}
 
@@ -497,7 +495,7 @@ void do_print_screen()
 
 	//save the map
 	{
-		bmp_filename = filename + ".bmp";
+		string bmp_filename = filename + ".bmp";
 
 		printf("saving map screenshot: '%s'\n", bmp_filename.c_str());
 
@@ -546,10 +544,10 @@ void init_main_objects()
 	rlaser = new RLaser(&ztime);
 }
 
-void display_proper_init(char *exec_command)
+void display_proper_init(const char *exec_command)
 {
 	printf("Welcome to the Zod Map Editor\n\n");
-	
+
 	printf("========================================================\n");
 	printf("Command list...\n");
 	printf("-f filename              - filename to be loaded / saved\n");
@@ -588,8 +586,6 @@ void getargs(int argc, char **argv)
 	int c;
 	int temp_int;
 	string temp_str;
-	extern char *optarg;
-	extern int optind, optopt;
 	
 	while ((c = getopt(argc, argv, "f:d:p:m:n")) != -1) 
 	{
@@ -1003,7 +999,7 @@ map_event reverse_event(map_event the_event)
 {
 	map_event the_reverse_event;
 	int mtile_x, mtile_y;
-	map_zone *the_map_zone;
+	const map_zone *the_map_zone;
 	ZObject *robj;
 	unsigned char rot, roid;
 
@@ -1080,7 +1076,6 @@ void process_event(map_event the_event, bool push_into_undo)
 	map_zone new_formal_zone;
 	map_object new_object;
 	int mtile_x, mtile_y;
-	int temp_x, temp_y;
 	map_tile new_tile;
 	bool do_it = false;
 	ZObject *robj;
@@ -1310,7 +1305,7 @@ void process_event(map_event the_event, bool push_into_undo)
 				changes_made = 1;
 				draw_info();
 			}
-			else push_into_undo = false;
+			else /*do_it = false*/;
 			break;
 		case PLACE_ITEM_MODE:
 			switch(the_event.object)
@@ -1397,23 +1392,26 @@ void process_event(map_event the_event, bool push_into_undo)
 				store_map_event(reverse_event(the_event), undo_list);
 			}
 
+			int temp_x, temp_y;
 			robj->GetCords(temp_x, temp_y);
 					
 			//find in the map list
-			for(vector<map_object>::iterator i=edit_map.GetObjectList().begin();i!=edit_map.GetObjectList().end(); i++)
-				if(temp_x == i->x * 16 && temp_y == i->y * 16)
 			{
-				edit_map.GetObjectList().erase(i);
-				break;
+				auto it = find_if(edit_map.GetObjectList().begin(), edit_map.GetObjectList().end(),
+					[&](const map_object &mo) { return temp_x == mo.x * 16 && temp_y == mo.y * 16; });
+				if(it != edit_map.GetObjectList().end())
+					edit_map.GetObjectList().erase(it);
 			}
-					
+
 			//find in the object list
-			for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); i++)
-				if(robj == *i)
 			{
-				delete *i;
-				object_list.erase(i);
-				break;
+				auto it = find_if(object_list.begin(), object_list.end(),
+					[&](const ZObject *o) { return robj == o; });
+				if(it != object_list.end())
+				{
+					delete *it;
+					object_list.erase(it);
+				}
 			}
 
 			//elseware
@@ -1426,7 +1424,6 @@ void process_event(map_event the_event, bool push_into_undo)
 			changes_made = true;
 			draw_info();
 			break;
-			break;
 	}
 }
 
@@ -1434,8 +1431,6 @@ void process_mouse_click(int x, int y, bool motion_click)
 {
 	map_object new_object;
 	int mtile_x, mtile_y;
-	int temp_x, temp_y;
-	bool do_it = false;
 	map_event the_event;
 	static int last_placed_tile_mtile = -1;
 
@@ -1595,7 +1590,7 @@ void process_mouse_click(int x, int y, bool motion_click)
 					//remove_object->GetCords(temp_x, temp_y);
 					//
 					////find in the map list
-					//for(vector<map_object>::iterator i=edit_map.GetObjectList().begin();i!=edit_map.GetObjectList().end(); i++)
+					//for(vector<map_object>::iterator i=edit_map.GetObjectList().begin();i!=edit_map.GetObjectList().end(); ++i)
 					//	if(temp_x == i->x * 16 && temp_y == i->y * 16)
 					//{
 					//	edit_map.GetObjectList().erase(i);
@@ -1603,7 +1598,7 @@ void process_mouse_click(int x, int y, bool motion_click)
 					//}
 					//
 					////find in the object list
-					//for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); i++)
+					//for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); ++i)
 					//	if(remove_object == *i)
 					//{
 					//	delete *i;
@@ -1692,7 +1687,7 @@ void process_mouse_movement(int x, int y)
 			case REMOVE_OBJECT_MODE:
 				if(hover_mtile == -1) break;
 				remove_object = NULL;
-				for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); i++)
+				for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); ++i)
 				{
 					int ox, oy;
 					int sx, sy;
@@ -1759,16 +1754,10 @@ void draw_palette(bool flip)
 	
 	draw_selection_box(hover_ptile);
 
-	for(vector<int>::iterator i=current_ptile_list.begin(); i!=current_ptile_list.end(); i++)
+	for(vector<int>::iterator i=current_ptile_list.begin(); i!=current_ptile_list.end(); ++i)
 		draw_x_marker(*i);
 	
 	//if(flip) SDL_Flip(screen);
-}
-
-void draw_seperator(bool flip)
-{
-	
-	if(flip) SDL_Flip(screen);
 }
 
 void draw_map_ruler()
@@ -1890,7 +1879,7 @@ void draw_map(bool flip)
 	static double last_nz_time = 0;;
 	int x, y;
 	int shift_x, shift_y;
-	int width, height;
+	int obj_w, obj_h;
 	int mtile_x, mtile_y;
 	SDL_Rect to_rect;
 	SDL_Rect from_rect;
@@ -1913,11 +1902,11 @@ void draw_map(bool flip)
 	edit_map.DoZoneEffects(current_time(), screen, MAP_SHIFT_X);
 	
 	//draw objects
-	for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); i++)
+	for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); ++i)
 		(*i)->DoRender(edit_map, screen, MAP_SHIFT_X);
 	
 	//draw after effects
-	for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); i++)
+	for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); ++i)
 		(*i)->DoAfterEffects(edit_map, screen, MAP_SHIFT_X);
 	
 	if(remove_object)
@@ -1968,71 +1957,71 @@ void draw_map(bool flip)
 				switch(current_object)
 				{
 					case FORT_FRONT:
-						bfort_front->GetDimensions(width, height);
-						if(width + mtile_x > edit_map.GetMapBasics().width) break;
-						if(height + mtile_y > edit_map.GetMapBasics().height) break;
+						bfort_front->GetDimensions(obj_w, obj_h);
+						if(obj_w + mtile_x > edit_map.GetMapBasics().width) break;
+						if(obj_h + mtile_y > edit_map.GetMapBasics().height) break;
 						
 						bfort_front->SetCords(mtile_x*16,mtile_y*16);
 						bfort_front->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(bfort_front.GetRender(), NULL, screen, &to_rect);
 						break;
 					case FORT_BACK:
-						bfort_back->GetDimensions(width, height);
-						if(width + mtile_x > edit_map.GetMapBasics().width) break;
-						if(height + mtile_y > edit_map.GetMapBasics().height) break;
+						bfort_back->GetDimensions(obj_w, obj_h);
+						if(obj_w + mtile_x > edit_map.GetMapBasics().width) break;
+						if(obj_h + mtile_y > edit_map.GetMapBasics().height) break;
 						
 						bfort_back->SetCords(mtile_x*16,mtile_y*16);
 						bfort_back->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(bfort_back.GetRender(), NULL, screen, &to_rect);
 						break;
 					case RADAR:
-						bradar->GetDimensions(width, height);
-						if(width + mtile_x > edit_map.GetMapBasics().width) break;
-						if(height + mtile_y > edit_map.GetMapBasics().height) break;
+						bradar->GetDimensions(obj_w, obj_h);
+						if(obj_w + mtile_x > edit_map.GetMapBasics().width) break;
+						if(obj_h + mtile_y > edit_map.GetMapBasics().height) break;
 						
 						bradar->SetCords(mtile_x*16,mtile_y*16);
 						bradar->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(bradar.GetRender(), NULL, screen, &to_rect);
 						break;
 					case REPAIR:
-						brepair->GetDimensions(width, height);
-						if(width + mtile_x > edit_map.GetMapBasics().width) break;
-						if(height + mtile_y > edit_map.GetMapBasics().height) break;
+						brepair->GetDimensions(obj_w, obj_h);
+						if(obj_w + mtile_x > edit_map.GetMapBasics().width) break;
+						if(obj_h + mtile_y > edit_map.GetMapBasics().height) break;
 						
 						brepair->SetCords(mtile_x*16,mtile_y*16);
 						brepair->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(brepair.GetRender(), NULL, screen, &to_rect);
 						break;
 					case ROBOT_FACTORY:
-						brobot->GetDimensions(width, height);
-						if(width + mtile_x > edit_map.GetMapBasics().width) break;
-						if(height + mtile_y > edit_map.GetMapBasics().height) break;
+						brobot->GetDimensions(obj_w, obj_h);
+						if(obj_w + mtile_x > edit_map.GetMapBasics().width) break;
+						if(obj_h + mtile_y > edit_map.GetMapBasics().height) break;
 						
 						brobot->SetCords(mtile_x*16,mtile_y*16);
 						brobot->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(brobot.GetRender(), NULL, screen, &to_rect);
 						break;
 					case VEHICLE_FACTORY:
-						bvehicle->GetDimensions(width, height);
-						if(width + mtile_x > edit_map.GetMapBasics().width) break;
-						if(height + mtile_y > edit_map.GetMapBasics().height) break;
+						bvehicle->GetDimensions(obj_w, obj_h);
+						if(obj_w + mtile_x > edit_map.GetMapBasics().width) break;
+						if(obj_h + mtile_y > edit_map.GetMapBasics().height) break;
 						
 						bvehicle->SetCords(mtile_x*16,mtile_y*16);
 						bvehicle->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(bvehicle.GetRender(), NULL, screen, &to_rect);
 						break;
 					case BRIDGE_VERT:
-						bbridge_vert->GetDimensions(width, height);
-						if(width + mtile_x > edit_map.GetMapBasics().width) break;
-						if(height + mtile_y > edit_map.GetMapBasics().height) break;
+						bbridge_vert->GetDimensions(obj_w, obj_h);
+						if(obj_w + mtile_x > edit_map.GetMapBasics().width) break;
+						if(obj_h + mtile_y > edit_map.GetMapBasics().height) break;
 						
 						bbridge_vert->SetCords(mtile_x*16,mtile_y*16);
 						bbridge_vert->DoRender(edit_map, screen, MAP_SHIFT_X);
 						break;
 					case BRIDGE_HORZ:
-						bbridge_horz->GetDimensions(width, height);
-						if(width + mtile_x > edit_map.GetMapBasics().width) break;
-						if(height + mtile_y > edit_map.GetMapBasics().height) break;
+						bbridge_horz->GetDimensions(obj_w, obj_h);
+						if(obj_w + mtile_x > edit_map.GetMapBasics().width) break;
+						if(obj_h + mtile_y > edit_map.GetMapBasics().height) break;
 						
 						bbridge_horz->SetCords(mtile_x*16,mtile_y*16);
 						bbridge_horz->DoRender(edit_map, screen, MAP_SHIFT_X);
@@ -2043,33 +2032,33 @@ void draw_map(bool flip)
 				switch(current_object)
 				{
 					case GATLING:
-						cgatling->GetDimensionsPixel(width, height);
-						if(width + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
-						if(height + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
+						cgatling->GetDimensionsPixel(obj_w, obj_h);
+						if(obj_w + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
+						if(obj_h + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
 						cgatling->SetCords(mtile_x*16,mtile_y*16);
 						cgatling->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(cgatling.GetRender(), NULL, screen, &to_rect);
 						break;
 					case GUN:
-						cgun->GetDimensionsPixel(width, height);
-						if(width + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
-						if(height + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
+						cgun->GetDimensionsPixel(obj_w, obj_h);
+						if(obj_w + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
+						if(obj_h + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
 						cgun->SetCords(mtile_x*16,mtile_y*16);
 						cgun->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(cgun.GetRender(), NULL, screen, &to_rect);
 						break;
 					case HOWITZER:
-						chowitzer->GetDimensionsPixel(width, height);
-						if(width + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
-						if(height + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
+						chowitzer->GetDimensionsPixel(obj_w, obj_h);
+						if(obj_w + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
+						if(obj_h + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
 						chowitzer->SetCords(mtile_x*16,mtile_y*16);
 						chowitzer->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(chowitzer.GetRender(), NULL, screen, &to_rect);
 						break;
 					case MISSILE_CANNON:
-						cmissilecannon->GetDimensionsPixel(width, height);
-						if(width + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
-						if(height + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
+						cmissilecannon->GetDimensionsPixel(obj_w, obj_h);
+						if(obj_w + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
+						if(obj_h + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
 						cmissilecannon->SetCords(mtile_x*16,mtile_y*16);
 						cmissilecannon->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(cmissilecannon.GetRender(), NULL, screen, &to_rect);
@@ -2080,57 +2069,57 @@ void draw_map(bool flip)
 				switch(current_object)
 				{
 					case JEEP:
-						vjeep->GetDimensionsPixel(width, height);
-						if(width + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
-						if(height + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
+						vjeep->GetDimensionsPixel(obj_w, obj_h);
+						if(obj_w + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
+						if(obj_h + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
 						vjeep->SetCords(mtile_x*16,mtile_y*16);
 						vjeep->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(vjeep.GetRender(), NULL, screen, &to_rect);
 						break;
 					case LIGHT:
-						vlight->GetDimensionsPixel(width, height);
-						if(width + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
-						if(height + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
+						vlight->GetDimensionsPixel(obj_w, obj_h);
+						if(obj_w + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
+						if(obj_h + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
 						vlight->SetCords(mtile_x*16,mtile_y*16);
 						vlight->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(vlight.GetRender(), NULL, screen, &to_rect);
 						break;
 					case MEDIUM:
-						vmedium->GetDimensionsPixel(width, height);
-						if(width + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
-						if(height + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
+						vmedium->GetDimensionsPixel(obj_w, obj_h);
+						if(obj_w + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
+						if(obj_h + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
 						vmedium->SetCords(mtile_x*16,mtile_y*16);
 						vmedium->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(vmedium.GetRender(), NULL, screen, &to_rect);
 						break;
 					case HEAVY:
-						vheavy->GetDimensionsPixel(width, height);
-						if(width + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
-						if(height + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
+						vheavy->GetDimensionsPixel(obj_w, obj_h);
+						if(obj_w + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
+						if(obj_h + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
 						vheavy->SetCords(mtile_x*16,mtile_y*16);
 						vheavy->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(vheavy.GetRender(), NULL, screen, &to_rect);
 						break;
 					case APC:
-						vapc->GetDimensionsPixel(width, height);
-						if(width + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
-						if(height + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
+						vapc->GetDimensionsPixel(obj_w, obj_h);
+						if(obj_w + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
+						if(obj_h + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
 						vapc->SetCords(mtile_x*16,mtile_y*16);
 						vapc->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(vapc.GetRender(), NULL, screen, &to_rect);
 						break;
 					case MISSILE_LAUNCHER:
-						vmissilelauncher->GetDimensionsPixel(width, height);
-						if(width + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
-						if(height + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
+						vmissilelauncher->GetDimensionsPixel(obj_w, obj_h);
+						if(obj_w + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
+						if(obj_h + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
 						vmissilelauncher->SetCords(mtile_x*16,mtile_y*16);
 						vmissilelauncher->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(vmissilelauncher.GetRender(), NULL, screen, &to_rect);
 						break;
 					case CRANE:
-						vcrane->GetDimensionsPixel(width, height);
-						if(width + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
-						if(height + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
+						vcrane->GetDimensionsPixel(obj_w, obj_h);
+						if(obj_w + (mtile_x * 16) > edit_map.GetMapBasics().width * 16) break;
+						if(obj_h + (mtile_y * 16) > edit_map.GetMapBasics().height * 16) break;
 						vcrane->SetCords(mtile_x*16,mtile_y*16);
 						vcrane->DoRender(edit_map, screen, MAP_SHIFT_X);
 // 						SDL_BlitSurface(vcrane.GetRender(), NULL, screen, &to_rect);
@@ -2281,7 +2270,7 @@ void draw_zones()
 
 	edit_map.GetViewShift(shift_x, shift_y);
 
-	for(vector<map_zone_info>::iterator i=edit_map.GetZoneInfoList().begin(); i!=edit_map.GetZoneInfoList().end(); i++)
+	for(vector<map_zone_info>::iterator i=edit_map.GetZoneInfoList().begin(); i!=edit_map.GetZoneInfoList().end(); ++i)
 	{
 		SDL_Rect the_box;
 		SDL_Color the_color;
@@ -2532,7 +2521,7 @@ int check_hover_object()
 	mtile_x_pix = mtile_x * 16;
 	mtile_y_pix = mtile_y * 16;
 	
-	for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); i++)
+	for(vector<ZObject*>::iterator i=object_list.begin(); i!=object_list.end(); ++i)
 	{
 		(*i)->GetCords(x,y);
 		
@@ -2554,18 +2543,15 @@ int check_hover_object()
 
 bool object_exists_at(int x, int y)
 {
-	for(vector<map_object>::iterator i=edit_map.GetObjectList().begin(); i!=edit_map.GetObjectList().end(); i++)
-		if(i->x == x && i->y == y)
-			return true;
-
-	return false;
+	return any_of(edit_map.GetObjectList().begin(), edit_map.GetObjectList().end(),
+		[&](const map_object &i) { return i.x == x && i.y == y; });
 }
 
 void place_object(map_object new_object)
 {
 	if(object_exists_at(new_object.x, new_object.y)) return;
 
-	//for(vector<map_object>::iterator i=edit_map.GetObjectList().begin(); i!=edit_map.GetObjectList().end(); i++)
+	//for(vector<map_object>::iterator i=edit_map.GetObjectList().begin(); i!=edit_map.GetObjectList().end(); ++i)
 	//	if(i->x == new_object.x && i->y == new_object.y)
 	//		return;
 	

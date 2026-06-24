@@ -105,11 +105,11 @@ int main(int argc, char **argv)
 	//objects
 	{
 		//map1
-		for(vector<map_object>::iterator i=map1.GetObjectList().begin(); i!=map1.GetObjectList().end(); i++)
+		for(vector<map_object>::iterator i=map1.GetObjectList().begin(); i!=map1.GetObjectList().end(); ++i)
 			output_map.PlaceObject(*i);
 
 		//map2
-		for(vector<map_object>::iterator i=map2.GetObjectList().begin(); i!=map2.GetObjectList().end(); i++)
+		for(vector<map_object>::iterator i=map2.GetObjectList().begin(); i!=map2.GetObjectList().end(); ++i)
 		{
 			map_object new_object;
 
@@ -125,10 +125,10 @@ int main(int argc, char **argv)
 
 	//zones
 	{
-		for(vector<map_zone>::iterator i=map1.GetZoneList().begin(); i!=map1.GetZoneList().end(); i++)
+		for(vector<map_zone>::iterator i=map1.GetZoneList().begin(); i!=map1.GetZoneList().end(); ++i)
 			output_map.AddZone(*i);
 
-		for(vector<map_zone>::iterator i=map2.GetZoneList().begin(); i!=map2.GetZoneList().end(); i++)
+		for(vector<map_zone>::iterator i=map2.GetZoneList().begin(); i!=map2.GetZoneList().end(); ++i)
 		{
 			map_zone new_zone;
 
