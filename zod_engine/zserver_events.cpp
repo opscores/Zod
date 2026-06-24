@@ -359,7 +359,6 @@ void ZServer::rcv_object_waypoints_event(ZServer *p, char *data, int size, int p
 		int expected_packet_size;
 		int waypoint_amount;
 		int ref_id;
-		ZObject *our_object;
 
 		//does it hold the header info?
 		if(size < 8) return;
@@ -705,9 +704,6 @@ void ZServer::exit_vehicle_event(ZServer *p, char *data, int size, int player)
 
 		//we need to kill the waypoints too
 		{
-			char *data;
-			int size;
-
 			//clear
 			obj->GetWayPointList().clear();
 

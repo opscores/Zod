@@ -1,0 +1,16 @@
+# Zod Project Code Owners
+
+# Engine team owns all engine code
+zod_engine/** @engine-team
+
+# Launcher team owns launcher code  
+zod_launcher/** @launcher-team
+
+# Map editor team owns map editor code
+zod_mapeditor/** @map-editor-team
+
+# Game balance team owns settings files
+default_settings.cfg default_settings.cfg.local @balance-team
+
+# CI/CD workflows owned by ops team
+.github/workflows/* @ops-team

@@ -1,0 +1,239 @@
+name: Zod Build Pipeline
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ['v*']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+
+jobs:
+  # ── Linux engine build ──────────────────────────────────────
+  linux-engine-build:
+    name: Engine (Linux, OPENGL=${{ matrix.opengl }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        opengl: [0, 1]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install ccache
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ccache
+      - name: Cache ccache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ccache
+          key: ccache-engine-${{ matrix.opengl }}-${{ github.run_id }}
+          restore-keys: ccache-engine-${{ matrix.opengl }}-
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y \
+            build-essential libsdl1.2-dev libsdl-ttf2.0-dev \
+            libsdl-mixer1.2-dev libsdl-image1.2-dev libmysqlclient-dev
+          sudo apt-get clean
+      - name: Install OpenGL headers
+        if: ${{ matrix.opengl == 1 }}
+        run: sudo apt-get install -y libgl1-mesa-dev
+      - name: Build Engine
+        run: |
+          cd zod_engine
+          make clean && CC="ccache gcc" CXX="ccache g++" OPENGL=${{ matrix.opengl }} JOBS=$(nproc) make
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: zod-engine-linux-opengl${{ matrix.opengl }}
+          path: zod_engine/zod
+
+
+  # ── Linux launcher build ────────────────────────────────────
+  linux-launcher-build:
+    name: Launcher (Linux, wxWidgets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install wxWidgets
+        run: sudo apt-get update && sudo apt-get install -y libwxgtk3.2-dev && sudo apt-get clean
+      - name: Build Launcher
+        working-directory: ./zod_launcher
+        run: make clean && make
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: zod-launcher-linux
+          path: zod_launcher/zod_launcher
+
+
+  # ── Linux map editor build ──────────────────────────────────
+  linux-mapeditor-build:
+    name: Map Editor (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential libsdl1.2-dev libsdl-ttf2.0-dev \
+            libsdl-mixer1.2-dev libsdl-image1.2-dev libmysqlclient-dev
+          sudo apt-get clean
+      - name: Build Map Editor tools
+        working-directory: ./zod_mapeditor
+        run: make clean && make
+      - name: Upload binaries
+        uses: actions/upload-artifact@v7
+        with:
+          name: zod-mapeditor-linux
+          path: |
+            zod_mapeditor/zod_map_editor
+            zod_mapeditor/tile_info_editor
+            zod_mapeditor/map_merger
+
+
+  # ─────────────────────────────────────────────────────────────
+  #  STABLE RELEASE (tags v* on main only)
+  # ─────────────────────────────────────────────────────────────
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    name: Release ${{ github.ref_name }}
+    needs: [linux-engine-build, linux-launcher-build, linux-mapeditor-build]
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with: { path: artifacts }
+      - name: Organize release
+        run: |
+          mkdir -p release/zod_engine release/zod_launcher release/zod_mapeditor
+          
+          # OpenGL=0 -> default binary
+          [ -f "artifacts/zod-engine-linux-opengl0/zod" ] && \
+            cp artifacts/zod-engine-linux-opengl0/zod release/zod_engine/zod
+          
+          # OpenGL=1 -> into zod_engine/zod-opengl/
+          [ -f "artifacts/zod-engine-linux-opengl1/zod" ] && \
+            cp artifacts/zod-engine-linux-opengl1/zod release/zod_engine/zod-opengl
+          
+          # Launcher and map editor tools
+          [ -f "artifacts/zod-launcher-linux/zod_launcher" ] && \
+            cp artifacts/zod-launcher-linux/zod_launcher release/zod_launcher/zod_launcher
+          
+          for tool in zod_map_editor tile_info_editor map_merger; do
+            [ -f "artifacts/zod-mapeditor-linux/$tool" ] && \
+              cp "artifacts/zod-mapeditor-linux/$tool" "release/zod_mapeditor/$tool"
+          done
+          
+          # Copy assets/ and maps/ from repository root
+          [ -d "assets" ] && cp -r assets release/
+          [ -d "maps" ] && cp -r maps release/
+
+          ls -la release/
+      - name: Fix executable permissions
+        run: |
+          find release/zod_engine release/zod_launcher release/zod_mapeditor \
+            -type f -exec chmod +x {} +
+      - name: Pack Linux archive
+        run: |
+          cd release
+          tar czf zod-${{ github.ref_name }}-linux.tar.gz \
+            --transform='s|^|Zod/|' \
+            zod_engine zod_launcher zod_mapeditor assets maps
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/zod-*.tar.gz
+          generate_release_notes: true
+      - name: Job Summary
+        run: |
+          echo "### 🚀 Stable Release Published" >> $GITHUB_STEP_SUMMARY
+          echo "- Tag: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Download: [Release page](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }})" >> $GITHUB_STEP_SUMMARY
+
+  # ─────────────────────────────────────────────────────────────
+  #  DEV BUILD (develop branch only)
+  # ─────────────────────────────────────────────────────────────
+  dev-package:
+    if: github.ref == 'refs/heads/develop'
+    name: Dev Build
+    needs: [linux-engine-build, linux-launcher-build, linux-mapeditor-build]
+    runs-on: ubuntu-latest
+    environment: development
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with: { path: artifacts }
+      - name: Organize dev build
+        run: |
+          mkdir -p release/zod_engine release/zod_launcher release/zod_mapeditor
+
+          # OpenGL=0 -> default binary
+          [ -f "artifacts/zod-engine-linux-opengl0/zod" ] && \
+            cp artifacts/zod-engine-linux-opengl0/zod release/zod_engine/zod
+
+          # OpenGL=1 -> into zod_engine/zod-opengl/
+          [ -f "artifacts/zod-engine-linux-opengl1/zod" ] && \
+            cp artifacts/zod-engine-linux-opengl1/zod release/zod_engine/zod-opengl
+
+          # Launcher and map editor tools
+          [ -f "artifacts/zod-launcher-linux/zod_launcher" ] && \
+            cp artifacts/zod-launcher-linux/zod_launcher release/zod_launcher/zod_launcher
+
+          for tool in zod_map_editor tile_info_editor map_merger; do
+            [ -f "artifacts/zod-mapeditor-linux/$tool" ] && \
+              cp "artifacts/zod-mapeditor-linux/$tool" "release/zod_mapeditor/$tool"
+          done
+
+          # Copy assets/ and maps/ from repository root
+          [ -d "assets" ] && cp -r assets release/
+          [ -d "maps" ] && cp -r maps release/
+
+          ls -la release/
+      - name: Fix executable permissions
+        run: |
+          find release/zod_engine release/zod_launcher release/zod_mapeditor \
+            -type f -exec chmod +x {} +
+      - name: Pack Linux archive
+        run: |
+          cd release
+          tar czf zod-develop-latest-linux.tar.gz \
+            --transform='s|^|Zod/|' \
+            zod_engine zod_launcher zod_mapeditor assets maps
+      - name: Upsert dev release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Delete old release and tag, create fresh from current commit
+          gh release delete develop-latest --yes 2>/dev/null || true
+          git push origin --delete refs/tags/develop-latest 2>/dev/null || true
+          gh release create develop-latest \
+            --title "Development Build — $(date +%Y-%m-%d)" \
+            --prerelease \
+            --notes "Latest development build.\n\nCommit: ${{ github.sha }}\nBranch: develop" \
+            release/zod-develop-latest-linux.tar.gz
+      - name: Job Summary
+        run: |
+          echo "### 🔧 Development Build Updated" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Tag: \`develop-latest\`" >> $GITHUB_STEP_SUMMARY
+
+  # ─────────────────────────────────────────────────────────────

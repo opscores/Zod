@@ -40,8 +40,8 @@ A real-time strategy game remake of the original "Z" by The Bitmap Brothers.
 
 ```sh
 sudo apt-get install build-essential
-sudo apt-get install libsdl-dev libsdl-ttf2.0-dev libsdl-mixer1.2-dev \
-  libsdl-image1.2-dev libmysqlclient-dev libwxgtk2.8-dev
+sudo apt-get install libsdl1.2-dev libsdl-ttf2.0-dev libsdl-mixer1.2-dev \
+  libsdl-image1.2-dev libmysqlclient-dev libwxgtk3.2-dev
 ```
 
 ---
@@ -276,3 +276,7 @@ If the game fails to start, try:
    standard XDG path (see [Command-Line Reference](#command-line-reference)).
 
 For further help, visit: http://zod.sourceforge.net
+
+---
+
+*Builds: [CI pipeline](.github/workflows/ci.yml) produces Linux binaries on every push.*
